@@ -203,6 +203,20 @@
     /* Note */
     .note { font-size: 12px; color: var(--text3); line-height: 1.7; margin-top: .875rem; padding: .75rem; background: var(--bg2); border-radius: var(--radius); border-left: 3px solid var(--border2); }
 
+    /* Bank cards */
+    .bcard { border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: .875rem; position: relative; }
+    .bcard.lppsa-c { border-color: #0F6E56; border-width: 1.5px; }
+    .bcard.best-c { border-color: var(--brand); border-width: 1.5px; }
+    .b-name { font-size: 12px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
+    .b-type { font-size: 10px; color: var(--text2); margin: 0 0 6px; }
+    .b-ansuran { font-size: 17px; font-weight: 600; color: var(--text); margin: 0; }
+    .b-sub { font-size: 10px; color: var(--text3); margin: 2px 0 0; }
+    .b-badge { position: absolute; top: 7px; right: 7px; font-size: 9px; padding: 2px 6px; border-radius: 20px; }
+    .bg-gov { background: #e1f5ee; color: #085041; }
+    .bg-best { background: #e8f0f8; color: #0c447c; }
+    .rate-item { display: flex; align-items: center; justify-content: space-between; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 7px 10px; font-size: 12px; }
+    .rate-input { width: 52px; border: 0.5px solid var(--border2); border-radius: 4px; padding: 3px 5px; font-size: 11px; text-align: center; background: var(--bg2); color: var(--text); }
+
     /* Footer */
     .footer { text-align: center; font-size: 11px; color: var(--text3); padding: 1.5rem 1rem; }
 
@@ -359,23 +373,22 @@
 
   <!-- ===== PANEL: LPPSA VS BANK ===== -->
   <div id="p-bank" class="panel">
-    <p class="stitle">perbandingan kos keseluruhan</p>
-    <div class="cg">
-      <div class="cc ft">
-        <p class="cc-title">🏛️ LPPSA <span class="badge">Sektor Awam</span></p>
-        <div id="lcmp"></div>
-      </div>
-      <div class="cc">
-        <p class="cc-title">🏦 Bank Konvensional</p>
-        <div id="bcmp"></div>
-      </div>
-    </div>
-    <div id="verdict" class="status s-ok" style="margin-bottom:1rem"></div>
-    <p class="stitle">jadual perbandingan kos</p>
+    <p class="stitle">kadar keuntungan / faedah — boleh edit terus</p>
+    <div id="rate-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;margin-bottom:1rem"></div>
+    <hr class="div">
+    <p class="stitle">perbandingan ansuran bulanan</p>
+    <div id="bank-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:1rem"></div>
+    <hr class="div">
+    <p class="stitle">jadual perbandingan penuh</p>
     <div style="overflow-x:auto">
-      <table class="tbl total" id="cmptbl"></table>
+      <table class="tbl" style="min-width:580px">
+        <thead><tr>
+          <td>Bank / Produk</td><td>Jenis</td><td>Kadar</td><td>Ansuran/Bulan</td><td>Jumlah Bayar</td><td>Jumlah Faedah</td><td>Beza vs LPPSA</td>
+        </tr></thead>
+        <tbody id="bank-tbody"></tbody>
+      </table>
     </div>
-    <p class="note">* Kadar bank konvensional diandaikan 4.35% p.a. (anggaran BFR semasa). Kadar sebenar bergantung kepada bank dan profil kredit pemohon. Dapatkan sebut harga rasmi sebelum membuat keputusan.</p>
+    <p class="note">⚠️ Kadar di atas adalah anggaran dan mungkin berbeza mengikut profil kredit, pakej promosi, dan polisi bank masing-masing. Dapatkan sebut harga rasmi sebelum membuat keputusan.</p>
   </div>
 
   <!-- ===== PANEL: SYARAT ===== -->
@@ -701,36 +714,76 @@
   }
 
   function renderBank() {
-    const { biaya, r, n, ansuran, total, untung, tMaks, kadar } = S;
+    const { biaya, n } = S;
     if (!biaya) return;
-    const kBank = 4.35, rB = (kBank/100)/12;
-    const aBank = biaya * rB * Math.pow(1+rB,n) / (Math.pow(1+rB,n)-1);
-    const tBank = aBank * n, uBank = tBank - biaya;
-    const proses = biaya * .005, mrtaB = biaya * .03, mrtaL = biaya * .02;
-    const kosL = total + mrtaL, kosB = tBank + proses + mrtaB;
 
-    const rowL = [['Kadar keuntungan', kadar.toFixed(1)+'% p.a.'],['Ansuran bulanan',fmt(ansuran)],['Jumlah keuntungan',fmt(untung)],['Yuran pemprosesan','Tiada'],['MRTA/Takaful (anggaran)',fmt(mrtaL)],['Jumlah kos',fmt(kosL)]];
-    const rowB = [['Kadar (anggaran)',kBank.toFixed(2)+'% p.a.'],['Ansuran bulanan',fmt(aBank)],['Jumlah keuntungan',fmt(uBank)],['Yuran pemprosesan',fmt(proses)],['MRTA/Takaful (anggaran)',fmt(mrtaB)],['Jumlah kos',fmt(kosB)]];
+    const BANKS = [
+      { id:'lppsa', name:'LPPSA', type:'Islamic (BBA)', kadar:4.00, gov:true },
+      { id:'maybank_i', name:'Maybank Islamic', type:'Islamic (MM)', kadar:4.35 },
+      { id:'maybank_c', name:'Maybank', type:'Konvensional', kadar:4.35 },
+      { id:'cimb_i', name:'CIMB Islamic', type:'Islamic (MM)', kadar:4.40 },
+      { id:'rhb', name:'RHB Bank', type:'Konvensional', kadar:4.40 },
+      { id:'publicbank', name:'Public Bank', type:'Konvensional', kadar:4.30 },
+      { id:'bsn', name:'BSN', type:'Konvensional', kadar:4.25 },
+      { id:'bankrakyat', name:'Bank Rakyat', type:'Islamic (Koperasi)', kadar:4.60 },
+      { id:'hlb', name:'Hong Leong', type:'Konvensional', kadar:4.35 },
+      { id:'ambank', name:'AmBank', type:'Konvensional', kadar:4.45 },
+    ];
 
-    document.getElementById('lcmp').innerHTML = rowL.map(([l,v])=>`<div class="cr"><span class="cl">${l}</span><span>${v}</span></div>`).join('');
-    document.getElementById('bcmp').innerHTML = rowB.map(([l,v])=>`<div class="cr"><span class="cl">${l}</span><span>${v}</span></div>`).join('');
+    const rg = document.getElementById('rate-grid');
+    if (!rg.hasChildNodes()) {
+      rg.innerHTML = BANKS.map(b => `
+        <div class="rate-item">
+          <span style="color:var(--text);font-weight:${b.gov?'600':'400'}">${b.name}</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input class="rate-input" type="number" id="br_${b.id}" value="${b.kadar}" min="1" max="15" step="0.05" oninput="renderBank()">
+            <span style="font-size:11px;color:var(--text2)">%</span>
+          </div>
+        </div>`).join('');
+    }
 
-    const jimat = kosB - kosL;
-    const vd = document.getElementById('verdict');
-    vd.className = 'status ' + (jimat > 0 ? 's-ok' : 's-warn');
-    vd.innerHTML = jimat > 0
-      ? `<span style="font-size:16px;flex-shrink:0">✅</span><span>LPPSA lebih jimat <strong>${fmt(jimat)}</strong> berbanding bank konvensional sepanjang tempoh pembiayaan.</span>`
-      : `<span style="font-size:16px;flex-shrink:0">ℹ️</span><span>Bandingkan tawaran bank dengan teliti.</span>`;
+    const getR = id => parseFloat(document.getElementById('br_'+id)?.value || BANKS.find(b=>b.id===id).kadar);
+    const calcA = (k) => { const r=(k/100)/12; return biaya*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1); };
+    const fmtK = v => 'RM '+Math.round(v/1000).toLocaleString()+'k';
 
-    document.getElementById('cmptbl').innerHTML = `
-      <thead><tr style="font-size:11px;color:var(--text2)"><td>Perkara</td><td>LPPSA</td><td>Bank</td></tr></thead>
-      <tbody>
-        <tr><td style="color:var(--text2)">Ansuran bulanan</td><td>${fmt(ansuran)}</td><td>${fmt(aBank)}</td></tr>
-        <tr><td style="color:var(--text2)">Jumlah keuntungan</td><td>${fmt(untung)}</td><td>${fmt(uBank)}</td></tr>
-        <tr><td style="color:var(--text2)">Yuran pemprosesan</td><td>RM 0</td><td>${fmt(proses)}</td></tr>
-        <tr><td style="color:var(--text2)">MRTA / Takaful</td><td>${fmt(mrtaL)}</td><td>${fmt(mrtaB)}</td></tr>
-        <tr><td>Jumlah kos keseluruhan</td><td>${fmt(kosL)}</td><td>${fmt(kosB)}</td></tr>
-      </tbody>`;
+    const results = BANKS.map(b => {
+      const k = getR(b.id);
+      const a = calcA(k);
+      return { ...b, k, a, total: a*n, faedah: a*n - biaya };
+    });
+
+    const lppsa = results.find(r => r.id === 'lppsa');
+    const minA = Math.min(...results.filter(r => !r.gov).map(r => r.a));
+
+    document.getElementById('bank-cards').innerHTML = results.map(r => {
+      const isLPPSA = r.gov;
+      const isBest = !r.gov && Math.abs(r.a - minA) < 0.01;
+      return `<div class="bcard ${isLPPSA?'lppsa-c':''} ${isBest?'best-c':''}">
+        ${isLPPSA ? '<span class="b-badge bg-gov">Kerajaan</span>' : ''}
+        ${isBest ? '<span class="b-badge bg-best">Paling Jimat</span>' : ''}
+        <p class="b-name">${r.name}</p>
+        <p class="b-type">${r.type}</p>
+        <p style="font-size:11px;color:var(--text2);margin:0 0 5px">${r.k.toFixed(2)}% p.a.</p>
+        <p class="b-ansuran">${fmt(r.a)}</p>
+        <p class="b-sub">/bulan &middot; ${fmtK(r.total)} jumlah</p>
+      </div>`;
+    }).join('');
+
+    document.getElementById('bank-tbody').innerHTML = results.map(r => {
+      const beza = r.a - lppsa.a;
+      const bezaTotal = r.total - lppsa.total;
+      const col = beza > 0 ? '#A32D2D' : beza < 0 ? '#085041' : 'var(--text2)';
+      const sign = beza > 0 ? '+' : '';
+      return `<tr>
+        <td style="font-weight:${r.gov?'600':'400'};color:var(--text)">${r.name}</td>
+        <td style="color:var(--text2)">${r.type}</td>
+        <td>${r.k.toFixed(2)}%</td>
+        <td>${fmt(r.a)}</td>
+        <td>${fmtK(r.total)}</td>
+        <td>${fmtK(r.faedah)}</td>
+        <td style="color:${col}">${r.gov ? '—' : sign+fmt(Math.abs(beza))+'/bln<br><span style="font-size:10px">'+sign+fmtK(Math.abs(bezaTotal))+' jumlah</span>'}</td>
+      </tr>`;
+    }).join('');
   }
 
   function tab(t) {
