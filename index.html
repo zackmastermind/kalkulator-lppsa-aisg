@@ -232,6 +232,8 @@
     <p class="stitle">maklumat peminjam &amp; hartanah</p>
     <div class="igrid">
       <div class="ig"><label>Gaji Pokok (RM)</label><div class="rw"><span>RM</span><input type="number" id="gaji" value="3500" min="500" step="100" oninput="kira()"></div></div>
+      <div class="ig"><label>Elaun Tetap (RM) <span style="font-size:10px;color:var(--text3)">EPT, ITK, ITPA dll</span></label><div class="rw"><span>RM</span><input type="number" id="elaun_tetap" value="0" min="0" step="50" oninput="kira()"></div></div>
+      <div class="ig"><label>Elaun Tidak Tetap (RM) <span style="font-size:10px;color:var(--text3)">OT, elaun lebih masa dll</span></label><div class="rw"><span>RM</span><input type="number" id="elaun_tidak_tetap" value="0" min="0" step="50" oninput="kira()"></div></div>
       <div class="ig"><label>Komitmen Bulanan (RM)</label><div class="rw"><span>RM</span><input type="number" id="komitmen" value="500" min="0" step="50" oninput="kira()"></div></div>
       <div class="ig"><label>Umur Sekarang (tahun)</label><input type="number" id="umur" value="30" min="18" max="59" oninput="kira()"></div>
       <div class="ig"><label>Harga Hartanah (RM)</label><div class="rw"><span>RM</span><input type="number" id="harga" value="350000" min="50000" step="5000" oninput="kira()"></div></div>
@@ -284,6 +286,15 @@
       <div class="prog-lbl"><span>Pembiayaan vs Kelayakan Maksimum</span><span id="pvk-t">–</span></div>
       <div class="prog-bg"><div class="prog-fill" id="pvk-f" style="width:0%"></div></div>
     </div>
+    <hr class="div">
+    <p class="stitle">pecahan pendapatan</p>
+    <table class="tbl">
+      <tr><td style="color:var(--text2)">Gaji pokok</td><td id="pd-gaji">–</td></tr>
+      <tr><td style="color:var(--text2)">Elaun tetap (100%)</td><td id="pd-tetap">–</td></tr>
+      <tr><td style="color:var(--text2)">Elaun tidak tetap (50% dikira)</td><td id="pd-ttetap">–</td></tr>
+      <tr><td style="color:var(--text2)">Pendapatan kasar dikira</td><td id="pd-kasar">–</td></tr>
+      <tr><td style="color:var(--text2)">Pendapatan bersih (×85%)</td><td id="pd-bersih">–</td></tr>
+    </table>
     <hr class="div">
     <p class="stitle">pecahan pembiayaan</p>
     <table class="tbl">
@@ -460,6 +471,8 @@
 
   function kira() {
     const gaji = +document.getElementById('gaji').value || 0;
+    const elaunTetap = +document.getElementById('elaun_tetap').value || 0;
+    const elaunTidakTetap = +document.getElementById('elaun_tidak_tetap').value || 0;
     const komitmen = +document.getElementById('komitmen').value || 0;
     const umur = +document.getElementById('umur').value || 30;
     const harga = +document.getElementById('harga').value || 0;
@@ -467,6 +480,8 @@
     const kadar = +document.getElementById('kadar').value || 4;
     const pct = getPct();
 
+    // Pendapatan kasar: gaji pokok + elaun tetap (100%) + elaun tidak tetap (50%)
+    const pendapatanKasar = gaji + elaunTetap + (elaunTidakTetap * 0.5);
     const tMaks = Math.min(tempoh, 60 - umur);
     const biaya = harga * (pct / 100);
     const deposit = harga - biaya;
@@ -475,12 +490,12 @@
     const ansuran = (n > 0 && r > 0) ? biaya * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : 0;
     const total = ansuran * n;
     const untung = total - biaya;
-    const gBersih = gaji * .85;
+    const gBersih = pendapatanKasar * .85;
     const kapasiti = gBersih * .6 - komitmen;
     const kelayakan = (kapasiti > 0 && r > 0) ? kapasiti * (Math.pow(1+r,n)-1) / (r*Math.pow(1+r,n)) : 0;
     const dsr = gBersih > 0 ? (ansuran + komitmen) / gBersih * 100 : 0;
 
-    S = { gaji, komitmen, umur, harga, tempoh, kadar, pct, deposit, tMaks, biaya, r, n, ansuran, total, untung, kelayakan, dsr, gBersih };
+    S = { gaji, elaunTetap, elaunTidakTetap, pendapatanKasar, komitmen, umur, harga, tempoh, kadar, pct, deposit, tMaks, biaya, r, n, ansuran, total, untung, kelayakan, dsr, gBersih };
 
     const sb = document.getElementById('sb'), st = document.getElementById('st');
     sb.className = 'status';
@@ -516,6 +531,12 @@
     document.getElementById('b5').textContent = kadar.toFixed(1) + '% p.a. (kadar berkurangan)';
     document.getElementById('b6').textContent = fmt(untung);
     document.getElementById('b7').textContent = (new Date().getFullYear() + tMaks) + '';
+    // Pendapatan breakdown
+    document.getElementById('pd-gaji').textContent = fmt(gaji);
+    document.getElementById('pd-tetap').textContent = fmt(elaunTetap);
+    document.getElementById('pd-ttetap').textContent = fmt(elaunTidakTetap) + ' → dikira ' + fmt(elaunTidakTetap * 0.5);
+    document.getElementById('pd-kasar').textContent = fmt(pendapatanKasar);
+    document.getElementById('pd-bersih').textContent = fmt(gBersih);
 
     const dsrR = Math.round(dsr);
     document.getElementById('dsr-t').textContent = dsrR + '%';
