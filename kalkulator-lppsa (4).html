@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalkulator Pembiayaan Perumahan LPPSA</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f0;
+      --bg3: #eeede8;
+      --text: #1a1a18;
+      --text2: #6b6b66;
+      --text3: #9e9d98;
+      --border: rgba(0,0,0,0.1);
+      --border2: rgba(0,0,0,0.18);
+      --green: #1D9E75;
+      --green-bg: #e1f5ee;
+      --green-txt: #085041;
+      --amber-bg: #faeeda;
+      --amber-txt: #854f0b;
+      --red: #E24B4A;
+      --red-bg: #fcebeb;
+      --red-txt: #a32d2d;
+      --blue-bg: #e6f1fb;
+      --blue-txt: #0c447c;
+      --brand: #1a3c5e;
+      --brand-light: #e8f0f8;
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1a;
+        --bg2: #252522;
+        --bg3: #2e2e2b;
+        --text: #f0efe8;
+        --text2: #a0a09a;
+        --text3: #6a6a65;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.2);
+        --green-bg: #04342c;
+        --green-txt: #9fe1cb;
+        --amber-bg: #412402;
+        --amber-txt: #fac775;
+        --red-bg: #501313;
+        --red-txt: #f7c1c1;
+        --blue-bg: #042c53;
+        --blue-txt: #b5d4f4;
+        --brand: #3a7bd5;
+        --brand-light: #0c2040;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg3);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      background: var(--brand);
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-icon {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.15);
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .header h1 { font-size: 17px; font-weight: 600; }
+    .header p { font-size: 12px; opacity: .7; margin-top: 1px; }
+
+    /* Container */
+    .container { max-width: 860px; margin: 0 auto; padding: 1.25rem; }
+
+    /* Card */
+    .card {
+      background: var(--bg);
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Section title */
+    .stitle {
+      font-size: 11px; font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 12px;
+    }
+
+    /* Input grid */
+    .igrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .ig { display: flex; flex-direction: column; gap: 5px; }
+    .ig label { font-size: 12px; color: var(--text2); }
+    .ig input, .ig select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--bg2);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .ig input:focus, .ig select:focus { border-color: var(--brand); }
+    .rw { position: relative; }
+    .rw span { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text2); pointer-events: none; }
+    .rw input { padding-left: 30px !important; }
+
+    /* Status */
+    .status {
+      border-radius: var(--radius);
+      padding: .65rem 1rem;
+      font-size: 13px;
+      margin-bottom: 1rem;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+    .s-ok { background: var(--green-bg); color: var(--green-txt); }
+    .s-warn { background: var(--amber-bg); color: var(--amber-txt); }
+    .s-danger { background: var(--red-bg); color: var(--red-txt); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .tb {
+      padding: 6px 13px; font-size: 12px;
+      border: 0.5px solid var(--border2);
+      border-radius: var(--radius);
+      background: var(--bg); color: var(--text2);
+      cursor: pointer; white-space: nowrap;
+      transition: all .15s;
+    }
+    .tb:hover { background: var(--bg2); }
+    .tb.active { background: var(--brand); color: #fff; border-color: var(--brand); font-weight: 500; }
+
+    /* Panel */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Metric row */
+    .mrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 1rem; }
+    .mc { background: var(--bg2); border-radius: var(--radius); padding: .875rem; }
+    .mc .ml { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+    .mc .mv { font-size: 19px; font-weight: 600; color: var(--text); }
+    .mc .ms { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+    /* Progress bar */
+    .prog { margin: .75rem 0; }
+    .prog-lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+    .prog-bg { background: var(--bg2); border-radius: 4px; height: 7px; overflow: hidden; }
+    .prog-fill { height: 100%; border-radius: 4px; transition: width .35s; }
+
+    /* Table */
+    .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tbl td { padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+    .tbl td:last-child { text-align: right; font-weight: 500; }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl thead td { font-size: 11px; color: var(--text2); font-weight: 400; padding-bottom: 8px; }
+    .tbl.total tr:last-child td { font-weight: 700; color: var(--text); font-size: 14px; }
+
+    /* Divider */
+    .div { border: none; border-top: 0.5px solid var(--border); margin: 1rem 0; }
+
+    /* Upfront item */
+    .uitem { display: flex; justify-content: space-between; align-items: flex-start; padding: 9px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; gap: 12px; }
+    .uitem:last-child { border-bottom: none; font-weight: 600; font-size: 14px; }
+    .unote { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .uval { text-align: right; flex-shrink: 0; font-weight: 500; }
+
+    /* Comparison grid */
+    .cg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+    @media (max-width: 480px) { .cg { grid-template-columns: 1fr; } }
+    .cc { border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1rem; }
+    .cc.ft { border-color: var(--brand); border-width: 1.5px; }
+    .cc-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--green-bg); color: var(--green-txt); font-weight: 500; }
+    .cr { display: flex; justify-content: space-between; font-size: 12px; padding: 5px 0; border-bottom: 0.5px solid var(--border); }
+    .cr:last-child { border-bottom: none; font-weight: 600; font-size: 13px; }
+    .cl { color: var(--text2); }
+
+    /* Legend */
+    .legend { display: flex; gap: 16px; margin: 8px 0 4px; font-size: 12px; color: var(--text2); flex-wrap: wrap; }
+    .legend span { display: flex; align-items: center; gap: 5px; }
+    .ldot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Note */
+    .note { font-size: 12px; color: var(--text3); line-height: 1.7; margin-top: .875rem; padding: .75rem; background: var(--bg2); border-radius: var(--radius); border-left: 3px solid var(--border2); }
+
+    /* Bank cards */
+    .bcard { border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: .875rem; position: relative; }
+    .bcard.lppsa-c { border-color: #0F6E56; border-width: 1.5px; }
+    .bcard.best-c { border-color: var(--brand); border-width: 1.5px; }
+    .b-name { font-size: 12px; font-weight: 600; color: var(--text); margin: 0 0 2px; }
+    .b-type { font-size: 10px; color: var(--text2); margin: 0 0 6px; }
+    .b-ansuran { font-size: 17px; font-weight: 600; color: var(--text); margin: 0; }
+    .b-sub { font-size: 10px; color: var(--text3); margin: 2px 0 0; }
+    .b-badge { position: absolute; top: 7px; right: 7px; font-size: 9px; padding: 2px 6px; border-radius: 20px; }
+    .bg-gov { background: #e1f5ee; color: #085041; }
+    .bg-best { background: #e8f0f8; color: #0c447c; }
+    .rate-item { display: flex; align-items: center; justify-content: space-between; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 7px 10px; font-size: 12px; }
+    .rate-input { width: 52px; border: 0.5px solid var(--border2); border-radius: 4px; padding: 3px 5px; font-size: 11px; text-align: center; background: var(--bg2); color: var(--text); }
+
+    /* Footer */
+    .footer { text-align: center; font-size: 11px; color: var(--text3); padding: 1.5rem 1rem; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .header { padding: 1rem; }
+      .container { padding: .875rem; }
+      .card { padding: 1rem; }
+      .mc .mv { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🏠</div>
+  <div>
+    <h1>Kalkulator Pembiayaan Perumahan LPPSA</h1>
+    <p>Lembaga Pembiayaan Perumahan Sektor Awam — Kakitangan Awam Malaysia</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Input -->
+  <div class="card">
+    <p class="stitle">maklumat peminjam &amp; hartanah</p>
+    <div class="igrid">
+      <div class="ig"><label>Gaji Pokok (RM)</label><div class="rw"><span>RM</span><input type="number" id="gaji" value="3500" min="500" step="100" oninput="kira()"></div></div>
+      <div class="ig"><label>Elaun Tetap (RM) <span style="font-size:10px;color:var(--text3)">EPT, ITK, ITPA dll</span></label><div class="rw"><span>RM</span><input type="number" id="elaun_tetap" value="0" min="0" step="50" oninput="kira()"></div></div>
+      <div class="ig"><label>Elaun Tidak Tetap (RM) <span style="font-size:10px;color:var(--text3)">OT, elaun lebih masa dll</span></label><div class="rw"><span>RM</span><input type="number" id="elaun_tidak_tetap" value="0" min="0" step="50" oninput="kira()"></div></div>
+      <div class="ig"><label>Komitmen Bulanan (RM)</label><div class="rw"><span>RM</span><input type="number" id="komitmen" value="500" min="0" step="50" oninput="kira()"></div></div>
+      <div class="ig"><label>Umur Sekarang (tahun)</label><input type="number" id="umur" value="30" min="18" max="59" oninput="kira()"></div>
+      <div class="ig"><label>Harga Hartanah (RM)</label><div class="rw"><span>RM</span><input type="number" id="harga" value="350000" min="50000" step="5000" oninput="kira()"></div></div>
+      <div class="ig"><label>Tempoh Pembiayaan</label>
+        <select id="tempoh" onchange="kira()">
+          <option value="10">10 tahun</option><option value="15">15 tahun</option>
+          <option value="20">20 tahun</option><option value="25" selected>25 tahun</option>
+          <option value="30">30 tahun</option><option value="35">35 tahun</option>
+        </select>
+      </div>
+      <div class="ig"><label>Kadar Keuntungan (%/tahun)</label><input type="number" id="kadar" value="4.0" min="1" max="10" step="0.1" oninput="kira()"></div>
+      <div class="ig"><label>Jenis Pembiayaan</label>
+        <select id="jenis" onchange="tukarJenis()">
+          <option value="90">Pembiayaan Biasa (90% — Deposit 10%)</option>
+          <option value="100">Full Loan / SRP (100% — Tiada Deposit)</option>
+          <option value="custom">Custom % (Tetapkan Sendiri)</option>
+        </select>
+      </div>
+      <div class="ig" id="custom-wrap" style="display:none"><label>% Pembiayaan (Custom)</label><div class="rw"><input type="number" id="customPct" value="95" min="50" max="100" step="1" oninput="kira()"><span style="right:10px;left:auto">%</span></div></div>
+    </div>
+    <div id="jenis-info" style="margin-top:10px;font-size:12px;padding:8px 12px;border-radius:8px;background:var(--blue-bg);color:var(--blue-txt);display:none"></div>
+  </div>
+
+  <!-- Status -->
+  <div id="sb" class="status s-ok"><span style="font-size:16px;flex-shrink:0">✅</span><span id="st">–</span></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tb active" onclick="tab('ringkasan')">📊 Ringkasan</button>
+    <button class="tb" onclick="tab('upfront')">💰 Kos Upfront</button>
+    <button class="tb" onclick="tab('carta')">📈 Amortisasi</button>
+    <button class="tb" onclick="tab('awal')">⚡ Bayar Awal</button>
+    <button class="tb" onclick="tab('bank')">⚖️ LPPSA vs Bank</button>
+    <button class="tb" onclick="tab('syarat')">📋 Syarat</button>
+  </div>
+
+  <!-- ===== PANEL: RINGKASAN ===== -->
+  <div id="p-ringkasan" class="panel active">
+    <div class="mrow">
+      <div class="mc"><p class="ml">Jumlah Pembiayaan</p><p class="mv" id="r-biaya">–</p><p class="ms" id="r-biaya-sub">90% harga hartanah</p></div>
+      <div class="mc"><p class="ml">Ansuran Bulanan</p><p class="mv" id="r-ansuran">–</p><p class="ms" id="r-sub">–</p></div>
+      <div class="mc"><p class="ml">Kelayakan Maksimum</p><p class="mv" id="r-layak">–</p><p class="ms">berdasarkan gaji bersih</p></div>
+      <div class="mc"><p class="ml">Jumlah Bayar Balik</p><p class="mv" id="r-total">–</p><p class="ms" id="r-untung">–</p></div>
+    </div>
+    <div class="prog">
+      <div class="prog-lbl"><span>DSR — Nisbah Khidmat Hutang</span><span id="dsr-t">–</span></div>
+      <div class="prog-bg"><div class="prog-fill" id="dsr-f" style="width:0%"></div></div>
+    </div>
+    <div class="prog">
+      <div class="prog-lbl"><span>Pembiayaan vs Kelayakan Maksimum</span><span id="pvk-t">–</span></div>
+      <div class="prog-bg"><div class="prog-fill" id="pvk-f" style="width:0%"></div></div>
+    </div>
+    <hr class="div">
+    <p class="stitle">pecahan pendapatan</p>
+    <table class="tbl">
+      <tr><td style="color:var(--text2)">Gaji pokok</td><td id="pd-gaji">–</td></tr>
+      <tr><td style="color:var(--text2)">Elaun tetap (100%)</td><td id="pd-tetap">–</td></tr>
+      <tr><td style="color:var(--text2)">Elaun tidak tetap (50% dikira)</td><td id="pd-ttetap">–</td></tr>
+      <tr><td style="color:var(--text2)">Pendapatan kasar dikira</td><td id="pd-kasar">–</td></tr>
+      <tr><td style="color:var(--text2)">Pendapatan bersih (×85%)</td><td id="pd-bersih">–</td></tr>
+    </table>
+    <hr class="div">
+    <p class="stitle">pecahan pembiayaan</p>
+    <table class="tbl">
+      <tr><td style="color:var(--text2)">Harga hartanah</td><td id="b1">–</td></tr>
+      <tr><td style="color:var(--text2)">Deposit</td><td id="b2">–</td></tr>
+      <tr><td style="color:var(--text2)">Jumlah pembiayaan</td><td id="b3">–</td></tr>
+      <tr><td style="color:var(--text2)">Tempoh efektif</td><td id="b4">–</td></tr>
+      <tr><td style="color:var(--text2)">Kadar keuntungan</td><td id="b5">–</td></tr>
+      <tr><td style="color:var(--text2)">Jumlah keuntungan dibayar</td><td id="b6">–</td></tr>
+      <tr><td style="color:var(--text2)">Tarikh tamat anggaran</td><td id="b7">–</td></tr>
+    </table>
+  </div>
+
+  <!-- ===== PANEL: KOS UPFRONT ===== -->
+  <div id="p-upfront" class="panel">
+    <p class="stitle">kos keluar poket sebenar</p>
+    <div id="ulist"></div>
+    <p class="note">⚠️ Duti setem dan yuran guaman adalah anggaran mengikut skala semasa. Pembebasan duti setem mungkin terpakai untuk pembeli rumah pertama bagi hartanah bawah RM500,000. MRTA opsyenal bagi pembiayaan LPPSA tetapi sangat disyorkan. Semak <strong>lppsa.gov.my</strong> untuk maklumat terkini.</p>
+  </div>
+
+  <!-- ===== PANEL: AMORTISASI ===== -->
+  <div id="p-carta" class="panel">
+    <p class="stitle">prinsipal vs keuntungan — setiap tahun</p>
+    <div class="legend">
+      <span><span class="ldot" style="background:#1D9E75"></span>Prinsipal dibayar</span>
+      <span><span class="ldot" style="background:#E24B4A"></span>Keuntungan dibayar</span>
+    </div>
+    <div style="position:relative;width:100%;height:280px">
+      <canvas id="cAmort"></canvas>
+    </div>
+    <hr class="div">
+    <p class="stitle">jadual tahunan terperinci</p>
+    <div style="overflow-x:auto">
+      <table class="tbl" style="min-width:480px">
+        <thead><tr><td>Tahun</td><td>Ansuran Terkumpul</td><td>Keuntungan</td><td>Prinsipal</td><td>Baki Hutang</td></tr></thead>
+        <tbody id="jtbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: BAYAR AWAL ===== -->
+  <div id="p-awal" class="panel">
+    <p class="stitle">simulasi bayaran tambahan bulanan</p>
+    <div class="ig" style="max-width:280px;margin-bottom:1.25rem">
+      <label>Bayaran Tambahan Sebulan (RM)</label>
+      <div class="rw"><span>RM</span><input type="number" id="tambahan" value="200" min="0" step="50" oninput="kiraAwal()"></div>
+    </div>
+    <div class="mrow">
+      <div class="mc"><p class="ml">Tempoh Asal</p><p class="mv" id="ea-t1">–</p><p class="ms">tanpa bayaran tambahan</p></div>
+      <div class="mc"><p class="ml">Tempoh Baharu</p><p class="mv" id="ea-t2">–</p><p class="ms" id="ea-jimat-thn">–</p></div>
+      <div class="mc"><p class="ml">Penjimatan Keuntungan</p><p class="mv" id="ea-jimat-rm">–</p><p class="ms">keuntungan tidak perlu dibayar</p></div>
+      <div class="mc"><p class="ml">Modal Tambahan</p><p class="mv" id="ea-modal">–</p><p class="ms">jumlah bayaran tambahan</p></div>
+    </div>
+    <div class="legend">
+      <span><span class="ldot" style="background:#aaa"></span>Ansuran biasa</span>
+      <span><span class="ldot" style="background:#1D9E75"></span>Dengan bayaran tambahan</span>
+    </div>
+    <div style="position:relative;width:100%;height:240px">
+      <canvas id="cAwal"></canvas>
+    </div>
+  </div>
+
+  <!-- ===== PANEL: LPPSA VS BANK ===== -->
+  <div id="p-bank" class="panel">
+    <p class="stitle">kadar keuntungan / faedah — boleh edit terus</p>
+    <div id="rate-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:8px;margin-bottom:1rem"></div>
+    <hr class="div">
+    <p class="stitle">perbandingan ansuran bulanan</p>
+    <div id="bank-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:1rem"></div>
+    <hr class="div">
+    <p class="stitle">jadual perbandingan penuh</p>
+    <div style="overflow-x:auto">
+      <table class="tbl" style="min-width:580px">
+        <thead><tr>
+          <td>Bank / Produk</td><td>Jenis</td><td>Kadar</td><td>Ansuran/Bulan</td><td>Jumlah Bayar</td><td>Jumlah Faedah</td><td>Beza vs LPPSA</td>
+        </tr></thead>
+        <tbody id="bank-tbody"></tbody>
+      </table>
+    </div>
+    <p class="note">⚠️ Kadar di atas adalah anggaran dan mungkin berbeza mengikut profil kredit, pakej promosi, dan polisi bank masing-masing. Dapatkan sebut harga rasmi sebelum membuat keputusan.</p>
+  </div>
+
+  <!-- ===== PANEL: SYARAT ===== -->
+  <div id="p-syarat" class="panel">
+    <p class="stitle">syarat kelayakan asas LPPSA</p>
+    <table class="tbl">
+      <tr><td style="color:var(--text2)">Pemohon</td><td>Kakitangan awam tetap sahaja</td></tr>
+      <tr><td style="color:var(--text2)">Gaji minimum</td><td>RM 1,000 gaji pokok</td></tr>
+      <tr><td style="color:var(--text2)">Had umur</td><td>Tempoh biaya tidak melebihi umur 60 tahun</td></tr>
+      <tr><td style="color:var(--text2)">Margin pembiayaan</td><td>Sehingga 90% harga hartanah</td></tr>
+      <tr><td style="color:var(--text2)">DSR maksimum</td><td>60% daripada gaji bersih</td></tr>
+      <tr><td style="color:var(--text2)">Kadar keuntungan</td><td>3.5% – 4.0% setahun (kadar berkurangan)</td></tr>
+      <tr><td style="color:var(--text2)">Jenis pembiayaan</td><td>Bai' Bithaman Ajil (BBA) — patuh Syariah</td></tr>
+      <tr><td style="color:var(--text2)">Tempoh maksimum</td><td>35 tahun atau sehingga umur 60 tahun</td></tr>
+      <tr><td style="color:var(--text2)">Bilangan pembiayaan</td><td>Maksimum 2 kali seumur hidup</td></tr>
+    </table>
+    <hr class="div">
+    <p class="stitle">skala duti setem MOT (memorandum of transfer)</p>
+    <table class="tbl">
+      <tr><td style="color:var(--text2)">Pertama RM100,000</td><td>1% = RM1,000</td></tr>
+      <tr><td style="color:var(--text2)">RM100,001 – RM500,000</td><td>2%</td></tr>
+      <tr><td style="color:var(--text2)">RM500,001 – RM1,000,000</td><td>3%</td></tr>
+      <tr><td style="color:var(--text2)">Melebihi RM1,000,000</td><td>4%</td></tr>
+    </table>
+    <hr class="div">
+    <p class="stitle">skala yuran guaman SPA &amp; perjanjian pinjaman</p>
+    <table class="tbl">
+      <tr><td style="color:var(--text2)">Pertama RM500,000</td><td>1% (minimum RM500)</td></tr>
+      <tr><td style="color:var(--text2)">RM500,001 – RM1,000,000</td><td>0.8%</td></tr>
+      <tr><td style="color:var(--text2)">RM1,000,001 – RM3,000,000</td><td>0.7%</td></tr>
+      <tr><td style="color:var(--text2)">Melebihi RM3,000,000</td><td>0.6%</td></tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    Kalkulator ini adalah untuk rujukan dan anggaran sahaja. Semak <a href="https://www.lppsa.gov.my" target="_blank" style="color:var(--brand)">lppsa.gov.my</a> untuk maklumat rasmi. &copy; 2025
+  </div>
+
+</div><!-- /container -->
+
+<script>
+  let S = {}, CH = {};
+
+  const fmt = n => 'RM ' + Math.round(n).toLocaleString('ms-MY');
+
+  function dutiMOT(h) {
+    let d = 0;
+    if (h > 1e6) d += (h - 1e6) * .04;
+    if (h > 5e5) d += (Math.min(h, 1e6) - 5e5) * .03;
+    if (h > 1e5) d += (Math.min(h, 5e5) - 1e5) * .02;
+    d += Math.min(h, 1e5) * .01;
+    return d;
+  }
+
+  function guaman(a) {
+    let f = 0;
+    if (a > 3e6) f += (Math.min(a, 7.5e6) - 3e6) * .006;
+    if (a > 1e6) f += (Math.min(a, 3e6) - 1e6) * .007;
+    if (a > 5e5) f += (Math.min(a, 1e6) - 5e5) * .008;
+    f += Math.min(a, 5e5) * .01;
+    return Math.max(f, 500);
+  }
+
+  function penilaian(h) {
+    let f = (h > 1e5) ? (Math.min(h, 2.1e6) - 1e5) * .002 : 0;
+    f += Math.min(h, 1e5) * .0025;
+    return Math.max(f, 500);
+  }
+
+  function tukarJenis() {
+    const j = document.getElementById('jenis').value;
+    const cw = document.getElementById('custom-wrap');
+    const info = document.getElementById('jenis-info');
+    cw.style.display = j === 'custom' ? 'flex' : 'none';
+    if (j === '100') {
+      info.style.display = 'block';
+      info.innerHTML = '✅ <strong>Full Loan / SRP:</strong> Tiada deposit diperlukan. Kelayakan tertakluk kepada had gaji dan syarat LPPSA semasa.';
+    } else if (j === 'custom') {
+      info.style.display = 'block';
+      info.innerHTML = 'ℹ️ Masukkan % pembiayaan yang dikehendaki. Deposit = baki % daripada harga hartanah.';
+    } else {
+      info.style.display = 'none';
+    }
+    kira();
+  }
+
+  function getPct() {
+    const j = document.getElementById('jenis').value;
+    if (j === '100') return 100;
+    if (j === 'custom') return Math.min(100, Math.max(50, +document.getElementById('customPct').value || 95));
+    return 90;
+  }
+
+  function kira() {
+    const gaji = +document.getElementById('gaji').value || 0;
+    const elaunTetap = +document.getElementById('elaun_tetap').value || 0;
+    const elaunTidakTetap = +document.getElementById('elaun_tidak_tetap').value || 0;
+    const komitmen = +document.getElementById('komitmen').value || 0;
+    const umur = +document.getElementById('umur').value || 30;
+    const harga = +document.getElementById('harga').value || 0;
+    const tempoh = +document.getElementById('tempoh').value || 25;
+    const kadar = +document.getElementById('kadar').value || 4;
+    const pct = getPct();
+
+    // Pendapatan kasar: gaji pokok + elaun tetap (100%) + elaun tidak tetap (50%)
+    const pendapatanKasar = gaji + elaunTetap + (elaunTidakTetap * 0.5);
+    const tMaks = Math.min(tempoh, 60 - umur);
+    const biaya = harga * (pct / 100);
+    const deposit = harga - biaya;
+    const r = (kadar / 100) / 12;
+    const n = tMaks * 12;
+    const ansuran = (n > 0 && r > 0) ? biaya * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1) : 0;
+    const total = ansuran * n;
+    const untung = total - biaya;
+    const gBersih = pendapatanKasar * .85;
+    const kapasiti = gBersih * .6 - komitmen;
+    const kelayakan = (kapasiti > 0 && r > 0) ? kapasiti * (Math.pow(1+r,n)-1) / (r*Math.pow(1+r,n)) : 0;
+    const dsr = gBersih > 0 ? (ansuran + komitmen) / gBersih * 100 : 0;
+
+    S = { gaji, elaunTetap, elaunTidakTetap, pendapatanKasar, komitmen, umur, harga, tempoh, kadar, pct, deposit, tMaks, biaya, r, n, ansuran, total, untung, kelayakan, dsr, gBersih };
+
+    const sb = document.getElementById('sb'), st = document.getElementById('st');
+    sb.className = 'status';
+    if (dsr > 60) {
+      sb.classList.add('s-danger');
+      st.innerHTML = '<strong>Tidak Layak.</strong> DSR ' + Math.round(dsr) + '% — melebihi had 60%. Kurangkan komitmen atau pilih hartanah yang lebih murah.';
+      document.getElementById('sb').children[0].textContent = '❌';
+    } else if (biaya > kelayakan) {
+      sb.classList.add('s-warn');
+      st.innerHTML = '<strong>Berhati-hati.</strong> Jumlah pembiayaan melebihi kelayakan berdasarkan gaji semasa.';
+      document.getElementById('sb').children[0].textContent = '⚠️';
+    } else if (tMaks < tempoh) {
+      sb.classList.add('s-warn');
+      st.innerHTML = '<strong>Tempoh Dilaraskan.</strong> Maksimum ' + tMaks + ' tahun (had umur 60 tahun). DSR ' + Math.round(dsr) + '%.';
+      document.getElementById('sb').children[0].textContent = '⚠️';
+    } else {
+      sb.classList.add('s-ok');
+      st.innerHTML = '<strong>Layak.</strong> DSR ' + Math.round(dsr) + '% — dalam had kelayakan LPPSA.';
+      document.getElementById('sb').children[0].textContent = '✅';
+    }
+
+    document.getElementById('r-biaya').textContent = fmt(biaya);
+    document.getElementById('r-biaya-sub').textContent = pct + '% harga hartanah' + (pct === 100 ? ' (Full Loan)' : '');
+    document.getElementById('r-ansuran').textContent = fmt(ansuran);
+    document.getElementById('r-sub').textContent = tMaks + ' tahun (' + n + ' bulan)';
+    document.getElementById('r-layak').textContent = fmt(kelayakan);
+    document.getElementById('r-total').textContent = fmt(total);
+    document.getElementById('r-untung').textContent = 'Keuntungan: ' + fmt(untung);
+    document.getElementById('b1').textContent = fmt(harga);
+    document.getElementById('b2').textContent = pct === 100 ? 'Tiada (Full Loan)' : fmt(deposit) + ' (' + (100-pct) + '%)';
+    document.getElementById('b3').textContent = fmt(biaya) + ' (' + pct + '%)';
+    document.getElementById('b4').textContent = tMaks + ' tahun';
+    document.getElementById('b5').textContent = kadar.toFixed(1) + '% p.a. (kadar berkurangan)';
+    document.getElementById('b6').textContent = fmt(untung);
+    document.getElementById('b7').textContent = (new Date().getFullYear() + tMaks) + '';
+    // Pendapatan breakdown
+    document.getElementById('pd-gaji').textContent = fmt(gaji);
+    document.getElementById('pd-tetap').textContent = fmt(elaunTetap);
+    document.getElementById('pd-ttetap').textContent = fmt(elaunTidakTetap) + ' → dikira ' + fmt(elaunTidakTetap * 0.5);
+    document.getElementById('pd-kasar').textContent = fmt(pendapatanKasar);
+    document.getElementById('pd-bersih').textContent = fmt(gBersih);
+
+    const dsrR = Math.round(dsr);
+    document.getElementById('dsr-t').textContent = dsrR + '%';
+    const df = document.getElementById('dsr-f');
+    df.style.width = Math.min(dsr, 100) + '%';
+    df.style.background = dsr <= 40 ? '#1D9E75' : dsr <= 60 ? '#BA7517' : '#A32D2D';
+
+    const pvkPct = kelayakan > 0 ? Math.min((biaya / kelayakan) * 100, 100) : 100;
+    document.getElementById('pvk-t').textContent = Math.round(pvkPct) + '% digunakan';
+    const pf = document.getElementById('pvk-f');
+    pf.style.width = pvkPct + '%';
+    pf.style.background = pvkPct <= 75 ? '#1D9E75' : pvkPct <= 100 ? '#BA7517' : '#A32D2D';
+
+    const aTab = document.querySelector('.tb.active');
+    if (aTab) {
+      const t = aTab.getAttribute('onclick').match(/'(\w+)'/)[1];
+      if (t === 'upfront') renderUpfront();
+      else if (t === 'carta') renderCarta();
+      else if (t === 'awal') kiraAwal();
+      else if (t === 'bank') renderBank();
+    }
+  }
+
+  function renderUpfront() {
+    const { harga, biaya, deposit, pct } = S;
+    if (!harga) return;
+    const mot = dutiMOT(harga);
+    const lStamp = biaya * .005;
+    const gSPA = guaman(harga);
+    const gLoan = guaman(biaya);
+    const pen = penilaian(harga);
+    const mrta = biaya * .02;
+    const ins = 280;
+    const tanpa = deposit + mot + lStamp + gSPA + gLoan + pen + ins;
+    const dengan = tanpa + mrta;
+
+    const rows = [
+      ['Deposit (' + (100-pct) + '%)', pct === 100 ? 'Full Loan — tiada deposit diperlukan' : 'Dibayar kepada pemaju / penjual', deposit],
+      ['Duti Setem MOT', 'Skala 1%–4% berdasarkan harga hartanah', mot],
+      ['Duti Setem Perjanjian Pinjaman', '0.5% daripada jumlah pembiayaan', lStamp],
+      ['Yuran Guaman SPA', 'Skala tetap Bar Council Malaysia', gSPA],
+      ['Yuran Guaman Perjanjian Pinjaman', 'Skala tetap Bar Council Malaysia', gLoan],
+      ['Yuran Penilaian Hartanah', 'Skala BOVAEA, minimum RM500', pen],
+      ['Insurans Kebakaran (Tahun Pertama)', 'Anggaran asas', ins],
+      ['MRTA / Takaful Pinjaman (Opsyenal)', '~2% jumlah pembiayaan, premium tunggal', mrta],
+    ];
+
+    let h = rows.map(([l,n,v]) =>
+      `<div class="uitem"><div><div>${l}</div><div class="unote">${n}</div></div><div class="uval">${fmt(v)}</div></div>`
+    ).join('');
+    h += `<hr class="div">`;
+    h += `<div class="uitem"><div><strong>Jumlah Keluar Poket (Tanpa MRTA)</strong></div><div class="uval">${fmt(tanpa)}</div></div>`;
+    h += `<div class="uitem"><div><strong>Jumlah Keluar Poket (Dengan MRTA)</strong></div><div class="uval">${fmt(dengan)}</div></div>`;
+    document.getElementById('ulist').innerHTML = h;
+  }
+
+  function renderCarta() {
+    const { biaya, r, n, tMaks, ansuran } = S;
+    if (!biaya || !r || !n) return;
+
+    const labels = [], pArr = [], uArr = [];
+    let baki = biaya;
+    for (let thn = 1; thn <= tMaks; thn++) {
+      let p = 0, u = 0;
+      for (let b = 0; b < 12 && baki > .01; b++) {
+        const ub = baki * r, pb = Math.min(ansuran - ub, baki);
+        u += ub; p += pb; baki -= pb;
+      }
+      labels.push('T' + thn);
+      pArr.push(Math.round(p));
+      uArr.push(Math.round(u));
+    }
+
+    if (CH.a) CH.a.destroy();
+    CH.a = new Chart(document.getElementById('cAmort').getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [
+        { label: 'Prinsipal', data: pArr, backgroundColor: '#1D9E75', stack: 's' },
+        { label: 'Keuntungan', data: uArr, backgroundColor: '#E24B4A', stack: 's' }
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: c => ' ' + c.dataset.label + ': RM' + c.raw.toLocaleString()
+        }}},
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 18 }},
+          y: { stacked: true, grid: { color: 'rgba(128,128,128,0.1)' }, ticks: { font: { size: 10 }, callback: v => 'RM' + Math.round(v/1000) + 'k' }}
+        }
+      }
+    });
+
+    let baki2 = biaya, rows = '';
+    for (let thn = 1; thn <= tMaks; thn++) {
+      let p = 0, u = 0, a = 0;
+      for (let b = 0; b < 12 && baki2 > .01; b++) {
+        const ub = baki2 * r, pb = Math.min(ansuran - ub, baki2);
+        u += ub; p += pb; a += ansuran; baki2 -= pb;
+      }
+      rows += `<tr>
+        <td style="color:var(--text2)">Tahun ${thn}</td>
+        <td>${fmt(a)}</td>
+        <td style="color:#E24B4A">${fmt(u)}</td>
+        <td style="color:#1D9E75">${fmt(p)}</td>
+        <td>${fmt(Math.max(0, baki2))}</td>
+      </tr>`;
+    }
+    document.getElementById('jtbody').innerHTML = rows;
+  }
+
+  function kiraAwal() {
+    const { biaya, r, n, ansuran, untung, tMaks } = S;
+    if (!biaya || !r) return;
+    const tambahan = +document.getElementById('tambahan').value || 0;
+    const aBaru = ansuran + tambahan;
+
+    let baki = biaya, bln = 0, uBaru = 0;
+    while (baki > .01 && bln < n) {
+      const ub = baki * r, pb = Math.min(aBaru - ub, baki);
+      uBaru += ub; baki -= pb; bln++;
+    }
+
+    const tBaru = (bln / 12).toFixed(1);
+    const tJimat = (tMaks - bln / 12).toFixed(1);
+    document.getElementById('ea-t1').textContent = tMaks + ' tahun';
+    document.getElementById('ea-t2').textContent = tBaru + ' tahun';
+    document.getElementById('ea-jimat-thn').textContent = '✨ Jimat ' + tJimat + ' tahun';
+    document.getElementById('ea-jimat-rm').textContent = fmt(untung - uBaru);
+    document.getElementById('ea-modal').textContent = fmt(tambahan * bln);
+
+    const labs = ['Mula'];
+    const b1Arr = [Math.round(biaya)], b2Arr = [Math.round(biaya)];
+    let b1 = biaya, b2 = biaya;
+    for (let thn = 1; thn <= tMaks; thn++) {
+      for (let b = 0; b < 12; b++) {
+        if (b1 > .01) { const u = b1*r; b1 -= Math.min(ansuran-u, b1); }
+        if (b2 > .01) { const u = b2*r; b2 -= Math.min(aBaru-u, b2); }
+      }
+      labs.push('T' + thn);
+      b1Arr.push(Math.round(Math.max(0, b1)));
+      b2Arr.push(Math.round(Math.max(0, b2)));
+    }
+
+    if (CH.e) CH.e.destroy();
+    CH.e = new Chart(document.getElementById('cAwal').getContext('2d'), {
+      type: 'line',
+      data: { labels: labs, datasets: [
+        { label: 'Biasa', data: b1Arr, borderColor: '#aaa', borderWidth: 1.5, pointRadius: 0, fill: false, borderDash: [5,3] },
+        { label: 'Dengan tambahan', data: b2Arr, borderColor: '#1D9E75', borderWidth: 2.5, pointRadius: 0, fill: false }
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          label: c => ' ' + c.dataset.label + ': RM' + c.raw.toLocaleString()
+        }}},
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, autoSkip: true, maxTicksLimit: 12 }},
+          y: { grid: { color: 'rgba(128,128,128,0.1)' }, min: 0, ticks: { font: { size: 10 }, callback: v => 'RM' + Math.round(v/1000) + 'k' }}
+        }
+      }
+    });
+  }
+
+  function renderBank() {
+    const { biaya, n } = S;
+    if (!biaya) return;
+
+    const BANKS = [
+      { id:'lppsa', name:'LPPSA', type:'Islamic (BBA)', kadar:4.00, gov:true },
+      { id:'maybank_i', name:'Maybank Islamic', type:'Islamic (MM)', kadar:4.35 },
+      { id:'maybank_c', name:'Maybank', type:'Konvensional', kadar:4.35 },
+      { id:'cimb_i', name:'CIMB Islamic', type:'Islamic (MM)', kadar:4.40 },
+      { id:'rhb', name:'RHB Bank', type:'Konvensional', kadar:4.40 },
+      { id:'publicbank', name:'Public Bank', type:'Konvensional', kadar:4.30 },
+      { id:'bsn', name:'BSN', type:'Konvensional', kadar:4.25 },
+      { id:'bankrakyat', name:'Bank Rakyat', type:'Islamic (Koperasi)', kadar:4.60 },
+      { id:'hlb', name:'Hong Leong', type:'Konvensional', kadar:4.35 },
+      { id:'ambank', name:'AmBank', type:'Konvensional', kadar:4.45 },
+    ];
+
+    const rg = document.getElementById('rate-grid');
+    if (!rg.hasChildNodes()) {
+      rg.innerHTML = BANKS.map(b => `
+        <div class="rate-item">
+          <span style="color:var(--text);font-weight:${b.gov?'600':'400'}">${b.name}</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input class="rate-input" type="number" id="br_${b.id}" value="${b.kadar}" min="1" max="15" step="0.05" oninput="renderBank()">
+            <span style="font-size:11px;color:var(--text2)">%</span>
+          </div>
+        </div>`).join('');
+    }
+
+    const getR = id => parseFloat(document.getElementById('br_'+id)?.value || BANKS.find(b=>b.id===id).kadar);
+    const calcA = (k) => { const r=(k/100)/12; return biaya*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1); };
+    const fmtK = v => 'RM '+Math.round(v/1000).toLocaleString()+'k';
+
+    const results = BANKS.map(b => {
+      const k = getR(b.id);
+      const a = calcA(k);
+      return { ...b, k, a, total: a*n, faedah: a*n - biaya };
+    });
+
+    const lppsa = results.find(r => r.id === 'lppsa');
+    const minA = Math.min(...results.filter(r => !r.gov).map(r => r.a));
+
+    document.getElementById('bank-cards').innerHTML = results.map(r => {
+      const isLPPSA = r.gov;
+      const isBest = !r.gov && Math.abs(r.a - minA) < 0.01;
+      return `<div class="bcard ${isLPPSA?'lppsa-c':''} ${isBest?'best-c':''}">
+        ${isLPPSA ? '<span class="b-badge bg-gov">Kerajaan</span>' : ''}
+        ${isBest ? '<span class="b-badge bg-best">Paling Jimat</span>' : ''}
+        <p class="b-name">${r.name}</p>
+        <p class="b-type">${r.type}</p>
+        <p style="font-size:11px;color:var(--text2);margin:0 0 5px">${r.k.toFixed(2)}% p.a.</p>
+        <p class="b-ansuran">${fmt(r.a)}</p>
+        <p class="b-sub">/bulan &middot; ${fmtK(r.total)} jumlah</p>
+      </div>`;
+    }).join('');
+
+    document.getElementById('bank-tbody').innerHTML = results.map(r => {
+      const beza = r.a - lppsa.a;
+      const bezaTotal = r.total - lppsa.total;
+      const col = beza > 0 ? '#A32D2D' : beza < 0 ? '#085041' : 'var(--text2)';
+      const sign = beza > 0 ? '+' : '';
+      return `<tr>
+        <td style="font-weight:${r.gov?'600':'400'};color:var(--text)">${r.name}</td>
+        <td style="color:var(--text2)">${r.type}</td>
+        <td>${r.k.toFixed(2)}%</td>
+        <td>${fmt(r.a)}</td>
+        <td>${fmtK(r.total)}</td>
+        <td>${fmtK(r.faedah)}</td>
+        <td style="color:${col}">${r.gov ? '—' : sign+fmt(Math.abs(beza))+'/bln<br><span style="font-size:10px">'+sign+fmtK(Math.abs(bezaTotal))+' jumlah</span>'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function tab(t) {
+    document.querySelectorAll('.tb').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('onclick').includes("'"+t+"'"));
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('p-'+t).classList.add('active');
+    if (t==='upfront') renderUpfront();
+    else if (t==='carta') renderCarta();
+    else if (t==='awal') kiraAwal();
+    else if (t==='bank') renderBank();
+  }
+
+  kira();
+</script>
+</body>
+</html>
